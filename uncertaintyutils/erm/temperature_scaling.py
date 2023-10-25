@@ -18,7 +18,7 @@ def find_optimal_temperature_temperature_scaling(logits, labels, T_min = 0.01, T
 
 def find_optimal_temperature_expectation_consistency(logits, labels, T_min = 0.01, T_max = 10.0):
     """
-    labels must be in {-1 ,1}
+    Labels must be in {-1, 1}
     """
     accuracy = np.mean(np.sign(logits) == labels)
 

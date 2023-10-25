@@ -71,8 +71,8 @@ def sample_data_from_teacher(n, teacher, likelihood = "logit", noise_std = 0.0, 
     if len(input_covariance) != d:
         raise Exception
     
-    x = sample_gaussian_input(n, input_covariance)
-
+    # we rescale the input data
+    x = sample_gaussian_input(n, input_covariance) / np.sqrt(d)
     y = sample_labels_from_local_fields(x @ teacher, likelihood = likelihood, noise_std = noise_std)
     return x, y
 
@@ -97,11 +97,12 @@ def sample_gcm_data_from_teacher(n, teacher, teacher_teacher_covariance, teacher
         - student_student_covariance : covariance of the student's data
     """
     # stack the covariance matrices to get the covariance of the joint distribution
+    teacher_dim, student_dim = len(teacher), len(student_student_covariance)
     covariance = np.block([[teacher_teacher_covariance, teacher_student_covariance], [teacher_student_covariance.T, student_student_covariance]])
     # sample from the joint distribution
     joint_data = sample_gaussian_input(n, covariance)
-    # split the data
-    teacher_input, student_input = joint_data[:, :len(teacher)], joint_data[:, len(teacher):]
+    # split the data and rescale the inputs by sqrt(dimension)
+    teacher_input, student_input = joint_data[:, :len(teacher)] / np.sqrt(teacher_dim), joint_data[:, len(teacher):] / np.sqrt(student_dim)
     y = sample_labels_from_local_fields(teacher_input @ teacher, likelihood = likelihood, noise_std = noise_std)
     return teacher_input, student_input, y
 
@@ -110,3 +111,24 @@ def sample_gcm_data(n, d,  teacher_teacher_covariance, teacher_student_covarianc
     teacher = sample_teacher(teacher_covariance)
     teacher_input, student_input, y = sample_gcm_data_from_teacher(n, teacher, teacher_teacher_covariance, teacher_student_covariance, student_student_covariance, likelihood = likelihood, noise_std = noise_std)
     return teacher, teacher_input, student_input, y
+
+def sample_random_features_data(n_training, teacher_dim, student_dim, activation_function, teacher_likelihood = 'logit', teacher_noise_std = 0.0, teacher_covariance = None):
+    """
+    Function to sample real random feature with Gaussian i.i.d matrix
+    returns:
+        - wstar
+        - F
+        - x_train
+        - random_features_training
+        - y_train
+    """
+    teacher_covariance = teacher_covariance or np.eye(teacher_dim)
+    wstar = sample_teacher(teacher_covariance)
+    # we'll use i.i.d covariance for the teacher's input
+    x_training, y_training = sample_data_from_teacher(n_training, wstar, teacher_likelihood, teacher_noise_std)
+    F = np.random.normal(0.0, 1.0, size=(student_dim, teacher_dim))
+    random_features_training = activation_function(np.dot(x_training, F.T)) / np.sqrt(student_dim)
+    # remove the mean, as it can make running the AMP algorithm very unstable
+    random_features_training -= np.mean(random_features_training, axis=0)
+
+    return wstar, F, x_training, random_features_training, y_training

@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize_scalar
+import gcmpyo3
 
 from . import base_likelihood
 
@@ -13,30 +14,15 @@ def proximal_operator(func : callable, x : float, tau : float) -> float:
 class ERMLogitLikelihood(base_likelihood.BaseLikelihood):
     def __init__(self) -> None:
         super().__init__()
+        self.likelihood = gcmpyo3.ERMLogistic()
 
-    def fout(self, w, y, V):
-        logistic = lambda x : np.log(1. + np.exp(-y*x))
-        logistic_prime = lambda x : - y / (1. + np.exp(y * x))
-        logistic_second = lambda x : - (y**2) * np.exp(y  * x) / (1. + np.exp(y * x))**2
-        # should be correct
-        raise NotImplementedError
-        # prox = utility.proximal_operator(logistic, w, V)
-        # return (1. / V) * (prox - w)
+    def fout(self, y, w, V):
+        return self.likelihood.call_f0(y, w, V)
 
-    def dwfout(self, w, y, V):
-        # do not recompute the proximal operator twice, reuse previous computations
-        f = f or self.fout(w, y, V)
-        # On peut enlever le y du cosh par symmetrie de la fonction
-        alpha = (2. * np.cosh(0.5 * y * (w + V*f)))**2
-        # Sanity check : apparement, pour que le onsager term soit globalement positif, il faut que dwgout soit negatif
-        return - 1. / (alpha + V)
+    def dwfout(self, y, w, V):
+        return self.likelihood.call_df0(y, w, V)
 
     def channel(self, y, w, V):
-        n = len(w)
-        g, dg = np.zeros_like(y), np.zeros_like(y)
-        for i in range(n):
-            g[i] = self.fout(w[i], y[i], V[i])
-            dg[i] = self.dwfout(w[i], y[i], V[i], f = g[i])
-        return g, dg
+        return [self.fout(y_, w_, v_) for y_, w_, v_ in zip(y, w, V)], [self.dwfout(y_, w_, v_) for y_, w_, v_ in zip(y, w, V)]
 
     # EQUATIONS FOR STATE EVOLUTION 
