@@ -7,7 +7,6 @@ import numpy as np
 def iterate_bp(x, y, prior, likelihood, n_iter, tol = 1e-3, verbose=False, damp=0.8):
     n, d = x.shape
     cavity_means, cavity_variances = np.zeros((d, n)), np.ones((d, n))
-    V, omega = np.zeros((n, d)), np.zeros((n, d))
     diff = 0.0
 
     x2 = x * x
@@ -16,13 +15,8 @@ def iterate_bp(x, y, prior, likelihood, n_iter, tol = 1e-3, verbose=False, damp=
         old_cavity_means = cavity_means.copy()
         old_cavity_variances = cavity_variances.copy()
         
-        for mu in range(n):
-            for i in range(d):
-                V[mu, i] = sum(x2[mu, j] * cavity_variances[j, mu] for j in range(d) if j != i)
-                omega[mu, i] = sum(x[mu, j] * cavity_means[j, mu] for j in range(d) if j != i)
-        
+        V, omega = compute_V_omega_from_cavity(x, x2, cavity_means, cavity_variances)
         A, B = compute_message_node_to_variable_from_V_omega(x, x2, y, V, omega, likelihood)
-
         R, Sigma = compute_message_variable_to_node_from_A_B(A, B)
 
         for mu in range(n):
@@ -51,6 +45,23 @@ def iterate_bp(x, y, prior, likelihood, n_iter, tol = 1e-3, verbose=False, damp=
         'variances' : vhat
     }
 
+def compute_V_omega_from_cavity(x, x2, cavity_means, cavity_variances):
+    """
+    V and omega have shape (n, d)
+    cavity_means and cavity_variances have shape (d, n)
+    """
+    n, d = x.shape
+    # V, omega = np.zeros((n, d)), np.zeros((n, d))
+    # for mu in range(n):
+    #     for i in range(d):
+    #         V[mu, i] = sum(x2[mu, j] * cavity_variances[j, mu] for j in range(d) if j != i)
+    #         omega[mu, i] = sum(x[mu, j] * cavity_means[j, mu] for j in range(d) if j != i)
+
+    V = np.tile(np.diag(x2 @ cavity_variances), (d, 1)).T - x2 * cavity_variances.T
+    omega = np.tile(np.diag(x @ cavity_means), (d, 1)).T - x * cavity_means.T
+    
+    return V, omega
+
 def compute_message_node_to_variable_from_V_omega(x, x_squared, y, V, omega, likelihood):
     """
     Compute the parmeters A and B in the relaxed BP (equation 144 in 1511.02476), which parametrize
@@ -69,18 +80,20 @@ def compute_message_variable_to_node_from_A_B(A, B):
     """
     Compute the "mean" and "variance" parameters R, Sigma  of the message m_{i \to \mu} from
     the parameters A and B of the message m_{\mu \to i}
+    
+    R, Sigma have shape (d, n) while A, B have shape (n, d)
     """
     # A_{\mu \to i} has shape (n, d)
     n, d = A.shape
-    Sigma, R = np.zeros((d, n)), np.zeros((d, n))
+    
+    # Sigma, R = np.zeros((d, n)), np.zeros((d, n))
+    # for mu in range(n):
+    #     for i in range(d):
+    #         Sigma[i, mu] = 1.0 / (np.sum(A[:, i]) - A[mu, i])
+    #         R[i, mu]   = Sigma[i, mu] * (np.sum(B[:, i]) - B[mu, i])
 
-    for mu in range(n):
-        for i in range(d):
-            Sigma[i, mu] = 1.0 / (np.sum(A[:, i]) - A[mu, i])
-            R[i, mu]   = Sigma[i, mu] * (np.sum(B[:, i]) - B[mu, i])
-
-    # Sigma = 1.0 / (np.tile(np.sum(A, axis = 0), (n, 1)) - A).T
-    # R     = Sigma * (np.tile(np.sum(B, axis = 0), (n, 1)) - B).T
+    Sigma = 1.0 / (np.tile(np.sum(A, axis = 0), (n, 1)) - A).T
+    R     = Sigma * (np.tile(np.sum(B, axis = 0), (n, 1)) - B).T
 
     return R, Sigma
 
