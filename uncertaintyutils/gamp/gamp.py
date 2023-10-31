@@ -5,7 +5,7 @@ import scipy.linalg as linalg
 from . import prior
 
 def iterate_gamp(X : List[List[float]], Y : List[float], w0 : List[float], likelihood, prior, max_iter : int = 200, tol : float =1e-7, 
-                 damp : float =0.0, early_stopping : bool =False, verbose : bool = False) -> dict:
+                 damp : float =0.0, early_stopping : bool =False, verbose : bool = False, xhat_0 = None, vhat_0 = None, g_0 = None) -> dict:
     """
     MAIN FUNCTION : Runs G-AMP and returns the finals parameters. If we study
     the variance, we are interested in the vhat quantities. The 'variance' of the vector 
@@ -24,9 +24,20 @@ def iterate_gamp(X : List[List[float]], Y : List[float], w0 : List[float], likel
     X2 = X * X
     
     # Initialisation
-    xhat = np.zeros(x_size)
-    vhat = np.ones(x_size)
-    g = np.zeros(y_size)
+    if xhat_0 is None:
+        xhat = np.zeros(x_size)
+    else:
+        xhat = np.copy(xhat_0)
+    
+    if vhat_0 is None:
+        vhat = np.ones(x_size)
+    else:
+        vhat = np.copy(vhat_0)
+
+    if g_0 is None:
+        g = np.zeros(y_size)
+    else:
+        g = np.copy(g_0)
 
     for t in range(max_iter):
         # onsager term, why not take the divergence ? 
@@ -65,6 +76,7 @@ def iterate_gamp(X : List[List[float]], Y : List[float], w0 : List[float], likel
     retour['estimator'] = xhat
     retour['variances'] = vhat
     retour['omega']     = omega
+    retour['g_out']     = g
     
     return retour
 
@@ -93,3 +105,23 @@ def gamp_nonspherical_covariance(mat_x, vec_y, mat_prior_cov, likelihood, max_it
     vhat = L @ np.diag('variances') @ L.T
 
     return what, vhat
+
+def retrain_gamp(what_old, vhat_old, x_new, y_new, likelihood_, prior_, x_old = None, y_old = None, g_old = None, tol = 1e-5, max_iter = 200, verbose = False):
+    """
+    From an estimator (what, vhat) that has converged and a new sample (x_new, y_new), update and returns
+    the new estimator.
+    For now, we just run AMP from what, vhat as starting point
+    argument:
+    """
+    assert (not x_old is None) and (not y_old is None), "Requires previous data to update"
+    # stack x_old and x_new
+    x_mat = np.vstack((x_old, x_new))
+    y_vec = np.hstack((y_old, y_new))
+
+    # for new samples we have no estimation of g so we just fill with zeros
+    if g_old is None:
+        g_vec = None
+    else:
+        g_vec = np.hstack((g_old, np.zeros(len(x_new))))
+
+    return iterate_gamp(x_mat, y_vec, None, likelihood=likelihood_, prior=prior_, tol = tol, max_iter=max_iter, verbose=verbose, xhat_0=what_old, vhat_0=vhat_old, g_0=g_vec)
