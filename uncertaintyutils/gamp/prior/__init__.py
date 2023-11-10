@@ -1,1 +1,1 @@
-from . import gaussian_prior, nonseparable_gaussian_prior
+from . import gaussian_prior, nonseparable_gaussian_prior, lasso_prior
