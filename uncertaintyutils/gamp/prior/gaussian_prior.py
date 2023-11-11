@@ -25,7 +25,15 @@ class GaussianPrior:
         Derivative of input function w.r.t. R, multiplied by Sigma
         """
         return fv(Sigma, R, self.lambda_)
-
+    
+    def fvv(self, Sigma : float, R : float) -> float:
+        """
+        Normally should be the derivative of fv w.r.t. R, multiplied by Sigma, but it's equal to 0 in our case ??
+        Meaning the variance is the same for all samples
+        NOTE : Not sure
+        """
+        return 0.0
+    
     def prior(self, b : float, A : float):
         '''
         Compute f and f' for Bernoulli-Gaussian prior
