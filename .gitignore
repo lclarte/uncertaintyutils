@@ -2,3 +2,5 @@ build/
 dist/
 uncertaintyutils.egg-info/
 *.pyc
+uncertaintyutils/gamp/__pycache__/__init__.cpython-310.pyc
+uncertaintyutils/__pycache__/__init__.cpython-310.pyc
