@@ -8,7 +8,7 @@ setup(
         name="uncertaintyutils", 
         version=VERSION,
         packages=["uncertaintyutils", "uncertaintyutils.data", "uncertaintyutils.gamp", "uncertaintyutils.erm", 
-                "uncertaintyutils.gamp.prior", "uncertaintyutils.gamp.likelihood"], # this must be the same as the name above
+                "uncertaintyutils.gamp.prior", "uncertaintyutils.gamp.likelihood", "uncertaintyutils.conformal"], # this must be the same as the name above
         install_requires=[], # add any additional packages that 
         # needs to be installed along with your package. Eg: 'caer'
 )

@@ -1,5 +1,8 @@
 # lasso_prior.py
 # see https://github.com/takashi-takahashi/approximate_message_passing/blob/master/ampy/AMPSolver.py
+# NOTE : In Lasso of sklearn, the loss part is divided by the number of samples, 
+# so we should divide the regularization parameter by the number of samples as well to be consistent with AMP
+# i.e if here we have LassoPrior(lambda_), we should do sklearn.Lasso(alpha = lambda_ / n_samples)
 
 import numpy as np
 

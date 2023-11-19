@@ -3,6 +3,7 @@ import numpy as np
 import scipy.linalg as linalg
 
 from . import prior
+from . import likelihood
 
 def iterate_gamp(X : List[List[float]], Y : List[float], w0 : List[float], likelihood, prior, max_iter : int = 200, tol : float =1e-7, 
                  damp : float =0.0, early_stopping : bool =False, verbose : bool = False, xhat_0 = None, vhat_0 = None, g_0 = None) -> dict:
@@ -84,7 +85,11 @@ def get_cavity_means_from_gamp(x_mat, y_vec, what, vhat, omega, likelihood_):
     n = len(y_vec)
     what_mat = np.tile(what, (n, 1)).T
     V = (x_mat * x_mat) @ vhat
-    return what_mat - x_mat.T * np.outer(vhat, [ likelihood_.fout(y=y1, w=omega1, V=V1) for y1, omega1, V1 in zip(y_vec, omega, V) ])
+    # For Gaussian likelihood, we can accelerate the computation by paralellization
+    if isinstance(likelihood_, likelihood.gaussian_log_likelihood.GaussianLogLikelihood):
+        return what_mat - x_mat.T * np.outer(vhat, likelihood_.fout(y_vec, omega, V))
+    else:
+        return what_mat - x_mat.T * np.outer(vhat, [ likelihood_.fout(y=y1, w=omega1, V=V1) for y1, omega1, V1 in zip(y_vec, omega, V) ])
 
 def gamp_nonspherical_covariance(mat_x, vec_y, mat_prior_cov, likelihood, max_iter=200, tol=1e-7, damp=0.0):
     """

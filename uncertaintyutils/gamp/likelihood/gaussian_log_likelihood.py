@@ -15,6 +15,7 @@ class GaussianLogLikelihood(base_likelihood.BaseLikelihood):
         argmin_z ( (z - w)^2 / (2 * v) + (y - z)^2 / (2 * noise_variance) ) = (noise_variance * w + v * y) / (noise_variance + v)
         et f_out(y, w, V) = 1/v * (prox(y, w, V) - w)
         """
+        # NOTE : It's already in a vectorized form 
         return (y - w) / (self.noise_variance + V)
 
     def dwfout(self, y, w, V):

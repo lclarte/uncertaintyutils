@@ -34,6 +34,9 @@ def sample_teacher(covariance : np.ndarray) -> np.ndarray:
     mean = np.zeros(d)
     return np.random.multivariate_normal(mean, covariance)
 
+def sample_teacher_laplace(d : int) -> np.array:
+    return np.random.laplace(loc = 0.0, scale = 1.0, size = d)
+
 def sample_gaussian_input(n : int, covariance : np.ndarray) -> np.ndarray:
     d = len(covariance)
     mean = np.zeros(d)
