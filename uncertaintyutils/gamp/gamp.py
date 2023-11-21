@@ -4,6 +4,7 @@ import scipy.linalg as linalg
 
 from . import prior
 from . import likelihood
+from .. import erm
 
 def iterate_gamp(X : List[List[float]], Y : List[float], w0 : List[float], likelihood, prior, max_iter : int = 200, tol : float =1e-7, 
                  damp : float =0.0, early_stopping : bool =False, verbose : bool = False, xhat_0 = None, vhat_0 = None, g_0 = None) -> dict:
@@ -81,16 +82,6 @@ def iterate_gamp(X : List[List[float]], Y : List[float], w0 : List[float], likel
     
     return retour
 
-def get_cavity_means_from_gamp(x_mat, y_vec, what, vhat, omega, likelihood_):
-    n = len(y_vec)
-    what_mat = np.tile(what, (n, 1)).T
-    V = (x_mat * x_mat) @ vhat
-    # For Gaussian likelihood, we can accelerate the computation by paralellization
-    if isinstance(likelihood_, likelihood.gaussian_log_likelihood.GaussianLogLikelihood):
-        return what_mat - x_mat.T * np.outer(vhat, likelihood_.fout(y_vec, omega, V))
-    else:
-        return what_mat - x_mat.T * np.outer(vhat, [ likelihood_.fout(y=y1, w=omega1, V=V1) for y1, omega1, V1 in zip(y_vec, omega, V) ])
-
 def gamp_nonspherical_covariance(mat_x, vec_y, mat_prior_cov, likelihood, max_iter=200, tol=1e-7, damp=0.0):
     """
     Compute the Bayesian estimator when the prior covariance is not lambda * I_d. To do so we do a Cholesky decomposition of the covariance
@@ -111,6 +102,8 @@ def gamp_nonspherical_covariance(mat_x, vec_y, mat_prior_cov, likelihood, max_it
 
     return what, vhat
 
+## functions useful for conformal prediction, jacknife, etc.
+
 def retrain_gamp(what_old, vhat_old, x_new, y_new, likelihood_, prior_, x_old = None, y_old = None, g_old = None, tol = 1e-5, max_iter = 200, verbose = False):
     """
     From an estimator (what, vhat) that has converged and a new sample (x_new, y_new), update and returns
@@ -130,3 +123,15 @@ def retrain_gamp(what_old, vhat_old, x_new, y_new, likelihood_, prior_, x_old = 
         g_vec = np.hstack((g_old, np.zeros(len(x_new))))
 
     return iterate_gamp(x_mat, y_vec, None, likelihood=likelihood_, prior=prior_, tol = tol, max_iter=max_iter, verbose=verbose, xhat_0=what_old, vhat_0=vhat_old, g_0=g_vec)
+
+
+def get_cavity_means_from_gamp(x_mat, y_vec, what, vhat, omega, likelihood_):
+    n = len(y_vec)
+    what_mat = np.tile(what, (n, 1)).T
+    V = (x_mat * x_mat) @ vhat
+    # For Gaussian likelihood, we can accelerate the computation by paralellization
+    if isinstance(likelihood_, likelihood.gaussian_log_likelihood.GaussianLogLikelihood):
+        return what_mat - x_mat.T * np.outer(vhat, likelihood_.fout(y_vec, omega, V))
+    else:
+        return what_mat - x_mat.T * np.outer(vhat, [ likelihood_.fout(y=y1, w=omega1, V=V1) for y1, omega1, V1 in zip(y_vec, omega, V) ])
+    
