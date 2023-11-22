@@ -108,6 +108,5 @@ def test_gamp_laplace():
     plt.plot(n_list, np.array(m_list) / np.sqrt(q_list) / np.sqrt(rho))
     plt.show()
 
-
 if __name__ == "__main__":
     test_gamp_laplace()

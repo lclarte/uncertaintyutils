@@ -12,10 +12,12 @@ def bootstrap_logistic_classification(X, Y, lambda_, n_resamples = 1000):
     NOTE : as n_resamples -> \infty, the average of the bootstrap weights should converge to the one of ERM
     The question is : what's the variance of the prediction for the confidence ? Does it contain the true one ? 
     """
+    raise NotImplementedError("DO not use this function for now")
     n, d = X.shape
     ws = np.zeros((n_resamples, d))
 
     for trial in range(n_resamples):
+        # NOTE : Should NOT work !!!! So sdon't use it
         indices = np.random.choice(d, size=n, replace=True)
         X_resample, Y_resample = X[indices], Y[indices]
 
