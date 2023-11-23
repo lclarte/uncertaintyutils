@@ -6,8 +6,7 @@ from tqdm import tqdm
 
 import uncertaintyutils.data as data
 import uncertaintyutils.gamp.gamp_weighted_loss as gamp_weighted_loss
-
-from state_evolution_gamp_vectoriel import state_evolution
+from uncertaintyutils.gamp.gamp_weighted_loss_se import state_evolution
 
 def basic_test():
     d = 128
@@ -49,10 +48,10 @@ def basic_test():
 
 def plot_overalps_amp_vs_true_bootstrap(random_seed = 0):
     np.random.seed(random_seed)
-    d = 128
+    d = 256
     noise_std = 1.0
-    k = 2
-    lambda_ = 1e-2
+    k = 5
+    lambda_ = 0.5
 
     wstar = data.sample_teacher(np.eye(d))
     wstar = np.sqrt(d) * wstar / np.linalg.norm(wstar)
