@@ -20,7 +20,6 @@ def dz0(y, omega, v, noise_variance):
 
 weights_proba_function_bootstrap = lambda w1, w2 : stats.poisson.pmf(w1, mu=1.0) * stats.poisson.pmf(w2, mu=1.0)
 
-
 weights_proba_function_full_resample = lambda w1, w2 : 0.5 if (w1 == 1.0 and w2 == 0.0) or (w1 == 0.0 and w2 == 1.0) else 0.0
 # with this proba functio we'll look at the correlation between the average of bootstrap and ERM
 # the second estimator will be ERM so the proba is 0 if w2 != 1
@@ -39,7 +38,6 @@ def get_weights_proba_function_cross_validation(k):
     return weights_proba_function
 
 ## 
-
 
 def update_hatoverlaps_fixed_weights(m_vec, q_mat, v_mat, rho_float, weights_vec, teacher_noise_variance):
     """
