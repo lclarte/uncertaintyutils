@@ -20,6 +20,7 @@ def dz0(y, omega, v, noise_variance):
 
 weights_proba_function_bootstrap = lambda w1, w2 : stats.poisson.pmf(w1, mu=1.0) * stats.poisson.pmf(w2, mu=1.0)
 
+# NOTE : With this resample, we cut the ttraining set in half so you need to take alpha -> 2 * alpha to have consistent result
 weights_proba_function_full_resample = lambda w1, w2 : 0.5 if (w1 == 1.0 and w2 == 0.0) or (w1 == 0.0 and w2 == 1.0) else 0.0
 # with this proba functio we'll look at the correlation between the average of bootstrap and ERM
 # the second estimator will be ERM so the proba is 0 if w2 != 1
