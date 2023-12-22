@@ -33,7 +33,7 @@ def prox_logistic_multivariate(y, omega_vec, v_inv_mat, weights_vec):
         return gradient_logistic_loss(y, z_vec, weights_vec) + v_inv_mat @ (z_vec - omega_vec)
     
     # NOTE : What's the best method to use ? 
-    res = optimize.minimize(aux, x0=omega_vec, method='Newton-CG', jac=jac_aux)
+    res = optimize.minimize(aux, x0=omega_vec, method='Newton-CG', jac=jac_aux, tol=1e-3)
     if res.success:
         return res.x
     else:
@@ -81,9 +81,9 @@ def integrand_m_hat_vec(y, omega_vec, v_inv_mat, conditional_mean, conditional_v
     gout = gout_logistic_multivariate(y, omega_vec, v_inv_mat, weights_vec)
     return gout * gcmpyo3.Logit(noise_variance=0).call_dz0(y, conditional_mean, conditional_variance)
 
-def integrand_m_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_inv_mat, conditional_variance, weights_vec):
+def integrand_m_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_inv_mat, conditional_variance, weights_vec, limit_quad_vec):
     return np.exp(- x1**2 / 2.0) * integrate.quad_vec(lambda x2 : np.exp(-x2**2 / 2.0) * integrand_m_hat_vec(y, q_sqrt_mat @ [x1, x2], v_inv_mat, m_vec @ q_inv_mat @ q_sqrt_mat @ [x1, x2], conditional_variance, weights_vec),
-                                                     -BOUND, BOUND)[0] / (2 * np.pi)
+                                                     -BOUND, BOUND, limit=limit_quad_vec)[0] / (2 * np.pi)
 
 """
 NOTE : Since quad_vec cannot integrate matrices, we return the first line of the matrix and we rebuild the matrix when we return 
@@ -97,9 +97,9 @@ def integrand_q_hat_vec(y, omega_vec, v_inv_mat, conditional_mean, conditional_v
     gout = gout_logistic_multivariate(y, omega_vec, v_inv_mat, weights_vec).reshape((-1, 1))
     return (gout @ gout.T)[0] * gcmpyo3.Logit(noise_variance=0).call_z0(y, conditional_mean, conditional_variance)
 
-def integrand_q_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_inv_mat, conditional_variance, weights_vec):
+def integrand_q_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_inv_mat, conditional_variance, weights_vec, limit_quad_vec):
     return np.exp(-x1**2 / 2.0 ) * integrate.quad_vec(lambda x2 : np.exp(- x2**2 / 2.0) * integrand_q_hat_vec(y, q_sqrt_mat @ [x1, x2], v_inv_mat, m_vec @ q_inv_mat @ q_sqrt_mat @ [x1, x2], conditional_variance, weights_vec),
-                                                      -BOUND, BOUND)[0] / (2 * np.pi)
+                                                      -BOUND, BOUND, limit=limit_quad_vec)[0] / (2 * np.pi)
 
 # 
 
@@ -107,11 +107,11 @@ def integrand_v_hat_vec(y, omega_vec, v_mat, v_inv_mat, conditional_mean, condit
     dgout = dwgout_logistic_multivariate(y, omega_vec, v_inv_mat, weights_vec, v_mat)[0]
     return dgout * gcmpyo3.Logit(noise_variance=0).call_z0(y, conditional_mean, conditional_variance)
 
-def integrand_v_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_mat, v_inv_mat, conditional_variance, weights_vec):
+def integrand_v_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_mat, v_inv_mat, conditional_variance, weights_vec, limit_quad_vec):
     return np.exp(-x1**2 / 2.0 ) * integrate.quad_vec(lambda x2 : np.exp(- x2**2 / 2.0) * integrand_v_hat_vec(y, q_sqrt_mat @ [x1, x2], v_mat, v_inv_mat, m_vec @ q_inv_mat @ q_sqrt_mat @ [x1, x2], conditional_variance, weights_vec),
-                                                      -BOUND, BOUND)[0] / (2 * np.pi)
+                                                      -BOUND, BOUND, limit=limit_quad_vec)[0] / (2 * np.pi)
 
-def update_hatoverlaps_fixed_weights(m_vec, q_mat, v_mat, rho_float, weights_vec):
+def update_hatoverlaps_fixed_weights(m_vec, q_mat, v_mat, rho_float, weights_vec, limit_quad_vec):
     """
     # NOTE : This is the part that changes compared to the Ridge case
     # NOTE 2 : https://en.wikipedia.org/wiki/Square_root_of_a_2_by_2_matrix to compute the square root explicitely
@@ -135,16 +135,17 @@ def update_hatoverlaps_fixed_weights(m_vec, q_mat, v_mat, rho_float, weights_vec
     conditional_variance = rho_float - m_vec @ q_inv_mat @ m_vec
 
     ys = [-1, 1]
+
     for y in ys:
-        print(f'    {y}')
-        m_hat_vec += integrate.quad_vec(lambda x1 : integrand_m_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_inv_mat, conditional_variance, weights_vec), -BOUND, BOUND)[0]
-        q_hat_vec += integrate.quad_vec(lambda x1 : integrand_q_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_inv_mat, conditional_variance, weights_vec), -BOUND, BOUND)[0]
-        v_hat_vec += integrate.quad_vec(lambda x1 : integrand_v_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_mat, v_inv_mat, conditional_variance, weights_vec), -BOUND, BOUND)[0]
+        print(f'    {y=}')
+        m_hat_vec += integrate.quad_vec(lambda x1 : integrand_m_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_inv_mat, conditional_variance, weights_vec, limit_quad_vec=limit_quad_vec), -BOUND, BOUND, limit=limit_quad_vec)[0]
+        q_hat_vec += integrate.quad_vec(lambda x1 : integrand_q_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_inv_mat, conditional_variance, weights_vec, limit_quad_vec=limit_quad_vec), -BOUND, BOUND, limit=limit_quad_vec)[0]
+        v_hat_vec += integrate.quad_vec(lambda x1 : integrand_v_hat_vec_fixed_x1(x1, y, m_vec, q_inv_mat, q_sqrt_mat, v_mat, v_inv_mat, conditional_variance, weights_vec, limit_quad_vec=limit_quad_vec), -BOUND, BOUND, limit=limit_quad_vec)[0]
 
     return m_hat_vec, np.array([[q_hat_vec[0], q_hat_vec[1]], [q_hat_vec[1], q_hat_vec[0]]]), np.array([[v_hat_vec[0], v_hat_vec[1]], [v_hat_vec[1], v_hat_vec[0]]])
 
 def update_hatoverlaps(m_vec, q_mat, v_mat, rho_float, alpha,  
-                        weights_bound, weights_proba_function):
+                        weights_bound, weights_proba_function, limit_quad_vec):
     """
     Here, gout -> vector, dgout -> matrix and we need to integrate over the 
     sampling weights
@@ -167,7 +168,7 @@ def update_hatoverlaps(m_vec, q_mat, v_mat, rho_float, alpha,
             print(f'{w1=}, {w2=}')
             weights_vec = np.array([w1, w2])
             proba = weights_proba_function(w1, w2)
-            tmp_mhat_vec, tmp_qhat_mat, tmp_vhat_mat = update_hatoverlaps_fixed_weights(m_vec, q_mat, v_mat, rho_float, weights_vec)
+            tmp_mhat_vec, tmp_qhat_mat, tmp_vhat_mat = update_hatoverlaps_fixed_weights(m_vec, q_mat, v_mat, rho_float, weights_vec, limit_quad_vec=limit_quad_vec)
             mhat_vec += proba * tmp_mhat_vec
             qhat_mat += proba * tmp_qhat_mat
             vhat_mat += proba * tmp_vhat_mat
@@ -187,7 +188,8 @@ def update_overlaps(hat_m_vec, hat_q_mat, hat_v_mat, lambda_ridge):
 
     return m_vec, q_mat, v_mat
 
-def state_evolution(alpha, lambda_ridge, max_iter=100, tol=1e-5, weights_bound=5, weights_proba_function=weights_proba_function_bootstrap, verbose=False):
+def state_evolution(alpha, lambda_ridge, max_iter=100, tol=1e-5, weights_bound=5, weights_proba_function=weights_proba_function_bootstrap,
+                    verbose=False, limit_quad_vec = 1000):
     """
     Note : weight_bound is NOT included in the weights, e.g. if weight_bound = 5, the max weight is 4
     so for full resample we need to set weight_bound = 2
@@ -203,7 +205,8 @@ def state_evolution(alpha, lambda_ridge, max_iter=100, tol=1e-5, weights_bound=5
         print(f'{t=}')
         print('Updating hat overlaps')
         hat_m_vec, hat_q_mat, hat_v_mat = update_hatoverlaps(m_vec, q_mat, v_mat, rho_float, alpha, 
-                                                            weights_bound=weights_bound, weights_proba_function=weights_proba_function)
+                                                            weights_bound=weights_bound, weights_proba_function=weights_proba_function,
+                                                            limit_quad_vec=limit_quad_vec)
         
         print('Updating overlaps')
         m_vec, q_mat, v_mat = update_overlaps(hat_m_vec, hat_q_mat, hat_v_mat, lambda_ridge)

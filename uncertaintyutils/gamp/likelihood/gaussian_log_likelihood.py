@@ -8,6 +8,7 @@ class GaussianLogLikelihood(base_likelihood.BaseLikelihood):
     def __init__(self, noise_variance) -> None:
         super().__init__()
         self.noise_variance = noise_variance
+        
 
     def fout(self, y, w, V):
         """

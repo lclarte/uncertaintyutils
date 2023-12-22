@@ -17,8 +17,7 @@ def dz0(y, omega, v, noise_variance):
 """
 
 # Function to model the different kind of resamples
-
-weights_proba_function_bootstrap = lambda w1, w2 : stats.poisson.pmf(w1, mu=1.0) * stats.poisson.pmf(w2, mu=1.0)
+weights_proba_function_bootstrap     = lambda w1, w2 : stats.poisson.pmf(w1, mu=1.0) * stats.poisson.pmf(w2, mu=1.0)
 
 # NOTE : With this resample, we cut the ttraining set in half so you need to take alpha -> 2 * alpha to have consistent result
 weights_proba_function_full_resample = lambda w1, w2 : 0.5 if (w1 == 1.0 and w2 == 0.0) or (w1 == 0.0 and w2 == 1.0) else 0.0
@@ -54,6 +53,7 @@ def update_hatoverlaps_fixed_weights(m_vec, q_mat, v_mat, rho_float, weights_vec
     vstar_float = rho_float + teacher_noise_variance - m_vec @ inv_q_mat @ m_vec
     bias_mat    = np.vstack([m_vec.reshape((1, 2)), m_vec.reshape((1, 2))]) @ inv_q_mat - np.eye(k)
     # gout_mat is the matrix used in gout, e.g. gout = gout_mat @ (y - omega), dgout = - gout_mat
+    
     gout_mat = np.linalg.inv(np.eye(k) + np.diag(weights_vec) @ v_mat) @ np.diag(weights_vec)
     
     mhat_vec = gout_mat @ np.ones(2)

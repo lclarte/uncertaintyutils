@@ -38,7 +38,7 @@ def update_hatoverlaps(m_vec, q_mat, v_mat, rho_float, alpha, teacher_noise_vari
     gout_mat = np.linalg.inv(np.eye(k) + v_mat)
 
     mhat_vec = gout_mat @ np.ones(2)
-    # NOTE : La covariance de y dans le cas des 2 channels est [[V + Delta, V], [V, V + Delta]]]
+    # NOTE : La covariance de y dans le cas des 2 channels est [[V + Delta, V], [V, V + Delta]]
     qhat_mat = gout_mat @ (vstar_float * np.ones((2, 2)) + teacher_noise_variance * np.eye(2) + bias_mat @ q_mat @ bias_mat.T) @ gout_mat.T
     vhat_mat = gout_mat
 
